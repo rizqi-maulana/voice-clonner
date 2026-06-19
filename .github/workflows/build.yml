@@ -1,0 +1,120 @@
+name: Build and Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-chatterbox:
+    name: Build Chatterbox (${{ matrix.os }})
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: chatterbox-windows
+          - os: macos-latest
+            artifact: chatterbox-macos
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install chatterbox dependencies
+        run: |
+          cd chatterbox
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Build chatterbox_server
+        run: pyinstaller build/chatterbox.spec --distpath dist/chatterbox
+
+      - name: Upload chatterbox artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/chatterbox/
+
+  build-main:
+    name: Build Main App (${{ matrix.os }})
+    needs: build-chatterbox
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            chatterbox-artifact: chatterbox-windows
+            artifact: voice-clonner-windows
+          - os: macos-latest
+            chatterbox-artifact: chatterbox-macos
+            artifact: voice-clonner-macos
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Download chatterbox artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.chatterbox-artifact }}
+          path: chatterbox_server_dist/
+
+      - name: Install PortAudio (macOS)
+        if: runner.os == 'macOS'
+        run: brew install portaudio
+
+      - name: Install main app dependencies
+        run: |
+          pip install -e . --extra-index-url https://download.pytorch.org/whl/cpu
+          pip install pyinstaller
+
+      - name: Build voice-clonner
+        run: pyinstaller build/main.spec --distpath dist/
+
+      - name: Upload main app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/voice-clonner/
+
+  release:
+    name: Create Release
+    needs: build-main
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: voice-clonner-windows
+          path: voice-clonner-windows/
+
+      - name: Download macOS build
+        uses: actions/download-artifact@v4
+        with:
+          name: voice-clonner-macos
+          path: voice-clonner-macos/
+
+      - name: Create archives
+        run: |
+          cd voice-clonner-windows && zip -r ../voice-clonner-windows.zip . && cd ..
+          cd voice-clonner-macos && zip -r ../voice-clonner-macos.zip . && cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            voice-clonner-windows.zip
+            voice-clonner-macos.zip
+          generate_release_notes: true
