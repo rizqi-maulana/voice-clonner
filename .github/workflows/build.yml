@@ -88,7 +88,7 @@ jobs:
           path: dist/voice-clonner/
 
   release:
-    name: Create Release
+    name: Upload Release to Public Repo
     needs: build-main
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
@@ -111,10 +111,15 @@ jobs:
           cd voice-clonner-windows && zip -r ../voice-clonner-windows.zip . && cd ..
           cd voice-clonner-macos && zip -r ../voice-clonner-macos.zip . && cd ..
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            voice-clonner-windows.zip
-            voice-clonner-macos.zip
-          generate_release_notes: true
+      - name: Create release on public repo
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG" \
+            voice-clonner-windows.zip \
+            voice-clonner-macos.zip \
+            --repo rizqi-maulana/voice-clonner \
+            --title "$TAG" \
+            --notes "Download the zip for your platform, extract, and run voice-clonner." \
+            --latest
