@@ -121,5 +121,5 @@ jobs:
             voice-clonner-macos.zip \
             --repo rizqi-maulana/voice-clonner \
             --title "$TAG" \
-            --notes "Download the zip for your platform, extract, and run voice-clonner." \
+            --notes "This update is required. Fixed application startup crash. Download the zip for your platform, extract, and run voice-clonner." \
             --latest
