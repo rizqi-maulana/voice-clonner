@@ -21,6 +21,13 @@ dependencies = [
     "fugashi[unidic-lite]>=1.3",
 ]
 
+[tool.setuptools]
+py-modules = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = []
+
 [tool.uv]
 required-environments = [
     "sys_platform == 'win32' and platform_machine == 'AMD64'",
