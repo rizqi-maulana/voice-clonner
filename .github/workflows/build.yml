@@ -41,6 +41,7 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: dist/chatterbox/
+          include-hidden-files: true
 
   build-main:
     name: Build Main App (${{ matrix.os }})
@@ -75,18 +76,32 @@ jobs:
 
       - name: Install main app dependencies
         run: |
-          pip install "numpy>=1.22,<2"
+          pip install numpy==1.22.0
           pip install -e . --extra-index-url https://download.pytorch.org/whl/cpu
           pip install pyinstaller
 
+      - name: Verify numpy DLLs exist
+        run: |
+          python -c "import numpy, os; d=os.path.dirname(numpy.__file__); libs=os.path.join(d,'.libs'); print('numpy:', numpy.__version__); print('path:', d); print('.libs exists:', os.path.isdir(libs)); print('.libs contents:', os.listdir(libs) if os.path.isdir(libs) else 'N/A')"
+        shell: bash
+
       - name: Build voice-clonner
         run: pyinstaller build/main.spec --distpath dist/
+
+      - name: Verify numpy DLLs in build output
+        run: |
+          echo "=== Checking for numpy DLLs in build ==="
+          find dist/voice-clonner -name "*openblas*" -o -name "*numpy*dll" 2>/dev/null || true
+          find dist/voice-clonner -path "*/numpy/.libs/*" 2>/dev/null || true
+          find dist/voice-clonner -path "*/numpy.libs/*" 2>/dev/null || true
+        shell: bash
 
       - name: Upload main app artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: dist/voice-clonner/
+          include-hidden-files: true
 
   release:
     name: Upload Release to Public Repo

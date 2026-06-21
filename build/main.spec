@@ -49,14 +49,22 @@ extra_datas += np_datas
 extra_binaries += np_binaries
 hiddenimports += np_hidden
 
-# Also explicitly bundle numpy .libs as datas to preserve path structure
+# Explicitly bundle numpy DLLs — handles both old layout (numpy/.libs/)
+# and new layout (numpy.libs/ at site-packages level)
 import numpy as _np
-_np_libs = os.path.join(os.path.dirname(_np.__file__), '.libs')
-if os.path.isdir(_np_libs):
-    for _f in os.listdir(_np_libs):
-        _src = os.path.join(_np_libs, _f)
-        if os.path.isfile(_src):
-            extra_datas.append((_src, os.path.join('numpy', '.libs')))
+_np_dir = os.path.dirname(_np.__file__)
+_sp_dir = os.path.dirname(_np_dir)
+
+for _libs_rel, _dest in [
+    (os.path.join(_np_dir, '.libs'), os.path.join('numpy', '.libs')),
+    (os.path.join(_sp_dir, 'numpy.libs'), 'numpy.libs'),
+]:
+    if os.path.isdir(_libs_rel):
+        for _f in os.listdir(_libs_rel):
+            _src = os.path.join(_libs_rel, _f)
+            if os.path.isfile(_src):
+                extra_datas.append((_src, _dest))
+                extra_binaries.append((_src, '.'))
 
 extra_datas += collect_data_files('unidic_lite')
 extra_datas += collect_data_files('spacy')
