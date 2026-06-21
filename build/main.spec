@@ -58,7 +58,7 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=['rthook_numpy.py'],
+    runtime_hooks=[os.path.join(SPECPATH, 'rthook_numpy.py')],
     excludes=[
         'tkinter',
         'test',
