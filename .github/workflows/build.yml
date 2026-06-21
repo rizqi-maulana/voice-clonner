@@ -79,7 +79,7 @@ jobs:
           pip install pyinstaller
 
       - name: Build voice-clonner
-        run: pyinstaller build/main.spec --distpath dist/
+        run: pyinstaller build/main.spec --distpath dist/ --noupx
 
       - name: Upload main app artifact
         uses: actions/upload-artifact@v4

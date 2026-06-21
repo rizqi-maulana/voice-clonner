@@ -58,7 +58,7 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=['rthook_numpy.py'],
     excludes=[
         'tkinter',
         'test',
@@ -92,7 +92,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     console=False,
     disable_windowed_traceback=False,
     icon=os.path.join('..', 'assets', 'icon.ico') if os.path.exists(os.path.join('..', 'assets', 'icon.ico')) else None,
@@ -104,7 +104,7 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     name='voice-clonner',
 )
