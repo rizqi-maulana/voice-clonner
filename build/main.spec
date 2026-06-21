@@ -3,7 +3,7 @@
 
 import sys
 import os
-from PyInstaller.utils.hooks import collect_submodules, collect_all, collect_data_files
+from PyInstaller.utils.hooks import collect_submodules, collect_all, collect_data_files, collect_dynamic_libs
 
 block_cipher = None
 
@@ -42,9 +42,21 @@ hiddenimports += collect_submodules('TTS')
 extra_datas = []
 extra_binaries = []
 
-np_datas, np_binaries, _ = collect_all('numpy')
+# Collect numpy entirely — datas preserve .libs directory structure,
+# binaries ensure DLLs are found, hiddenimports cover all submodules
+np_datas, np_binaries, np_hidden = collect_all('numpy')
 extra_datas += np_datas
 extra_binaries += np_binaries
+hiddenimports += np_hidden
+
+# Also explicitly bundle numpy .libs as datas to preserve path structure
+import numpy as _np
+_np_libs = os.path.join(os.path.dirname(_np.__file__), '.libs')
+if os.path.isdir(_np_libs):
+    for _f in os.listdir(_np_libs):
+        _src = os.path.join(_np_libs, _f)
+        if os.path.isfile(_src):
+            extra_datas.append((_src, os.path.join('numpy', '.libs')))
 
 extra_datas += collect_data_files('unidic_lite')
 extra_datas += collect_data_files('spacy')

@@ -1,17 +1,20 @@
-"""Runtime hook: pre-load numpy's OpenBLAS DLL before any imports."""
+"""Runtime hook: ensure numpy DLLs are findable in frozen builds."""
 import os
 import sys
-import glob
 
-if sys.platform == "win32":
-    base = sys._MEIPASS if getattr(sys, "frozen", False) else os.path.dirname(__file__)
-    libs_dir = os.path.join(base, "numpy", ".libs")
-    if os.path.isdir(libs_dir):
-        if hasattr(os, "add_dll_directory"):
-            os.add_dll_directory(libs_dir)
-        from ctypes import WinDLL
-        for dll in glob.glob(os.path.join(libs_dir, "*.dll")):
+if getattr(sys, "frozen", False) and sys.platform == "win32":
+    _base = sys._MEIPASS
+    _dirs = [
+        _base,
+        os.path.join(_base, "numpy", ".libs"),
+        os.path.join(_base, "numpy.libs"),
+        os.path.join(_base, "_internal", "numpy", ".libs"),
+        os.path.join(_base, "_internal", "numpy.libs"),
+    ]
+    for _d in _dirs:
+        if os.path.isdir(_d):
             try:
-                WinDLL(dll)
-            except OSError:
+                os.add_dll_directory(_d)
+            except (OSError, AttributeError):
                 pass
+            os.environ["PATH"] = _d + os.pathsep + os.environ.get("PATH", "")
