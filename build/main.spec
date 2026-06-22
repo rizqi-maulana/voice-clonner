@@ -66,6 +66,7 @@ for _libs_rel, _dest in [
                 extra_datas.append((_src, _dest))
                 extra_binaries.append((_src, '.'))
 
+extra_datas += collect_data_files('TTS')
 extra_datas += collect_data_files('unidic_lite')
 extra_datas += collect_data_files('spacy')
 extra_datas += collect_data_files('cutlet')
