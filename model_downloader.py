@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QProgressBar, QPushButton, QMessageBox,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar,
+    QPushButton, QMessageBox, QFileDialog, QFrame,
 )
-from PyQt5.QtCore import Qt
 
 REPO_ID = "coqui/XTTS-v2"
 MODEL_FILES = [
@@ -19,11 +20,170 @@ MODEL_FILES = [
     ("model.pth",         "Main model",      1_880_000_000),
 ]
 
+TOTAL_MODEL_SIZE = sum(size for _, _, size in MODEL_FILES)
+REQUIRED_GB = TOTAL_MODEL_SIZE / (1024 ** 3)
+
 HF_BASE = f"https://huggingface.co/{REPO_ID}/resolve/main"
 
 
+def _format_gb(b: int | float) -> str:
+    return f"{b / (1024 ** 3):.1f} GB"
+
+
+def _free_space(path: Path) -> int:
+    try:
+        p = path
+        while not p.exists():
+            p = p.parent
+        return shutil.disk_usage(str(p)).free
+    except OSError:
+        return 0
+
+
+class StorageCheckDialog(QDialog):
+    """Pre-download dialog showing disk space and allowing location change."""
+
+    def __init__(self, dest_dir: Path, config, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Model Storage")
+        self.setFixedSize(520, 280)
+        self.setModal(True)
+        self.setWindowFlags(
+            self.windowFlags() & ~Qt.WindowContextHelpButtonHint
+        )
+
+        self._config = config
+        self._dest_dir = dest_dir
+        self._accepted = False
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(28, 22, 28, 18)
+        lay.setSpacing(10)
+
+        title = QLabel("Voice model download")
+        title.setStyleSheet("font-size: 16px; font-weight: bold; color: #1d1d1f;")
+        lay.addWidget(title)
+
+        desc = QLabel(
+            "The voice model (~2 GB) needs to be downloaded once.\n"
+            "Please make sure you have enough disk space."
+        )
+        desc.setWordWrap(True)
+        desc.setStyleSheet("font-size: 13px; color: #6e6e73;")
+        lay.addWidget(desc)
+
+        lay.addSpacing(6)
+
+        info_frame = QFrame()
+        info_frame.setStyleSheet(
+            "QFrame { background: #f0f0f5; border: 1px solid #d2d2d7; "
+            "border-radius: 8px; padding: 12px; }"
+        )
+        info_lay = QVBoxLayout(info_frame)
+        info_lay.setSpacing(6)
+
+        self._loc_label = QLabel()
+        self._loc_label.setWordWrap(True)
+        self._loc_label.setStyleSheet("font-size: 12px; color: #1d1d1f; border: none;")
+        info_lay.addWidget(self._loc_label)
+
+        self._space_label = QLabel()
+        self._space_label.setStyleSheet("font-size: 12px; border: none;")
+        info_lay.addWidget(self._space_label)
+
+        needed = QLabel(f"Space needed:  ~{REQUIRED_GB:.1f} GB")
+        needed.setStyleSheet("font-size: 12px; color: #1d1d1f; border: none;")
+        info_lay.addWidget(needed)
+
+        lay.addWidget(info_frame)
+
+        self._warning_label = QLabel()
+        self._warning_label.setWordWrap(True)
+        self._warning_label.setStyleSheet("font-size: 12px; color: #d93025; font-weight: bold;")
+        self._warning_label.hide()
+        lay.addWidget(self._warning_label)
+
+        lay.addStretch()
+
+        btn_lay = QHBoxLayout()
+        btn_lay.setSpacing(10)
+
+        self._btn_change = QPushButton("Change Location")
+        self._btn_change.setMaximumWidth(150)
+        self._btn_change.setStyleSheet(
+            "QPushButton { background: #e8e8ed; color: #1d1d1f; border: 1px solid #d2d2d7; "
+            "border-radius: 6px; padding: 8px 16px; font-size: 13px; }"
+            "QPushButton:hover { background: #d8d8dd; }"
+        )
+        btn_lay.addWidget(self._btn_change)
+
+        btn_lay.addStretch()
+
+        self._btn_cancel = QPushButton("Cancel")
+        self._btn_cancel.setMaximumWidth(100)
+        btn_lay.addWidget(self._btn_cancel)
+
+        self._btn_download = QPushButton("Download")
+        self._btn_download.setMaximumWidth(120)
+        self._btn_download.setStyleSheet(
+            "QPushButton { background: #0066cc; color: white; border: none; "
+            "border-radius: 6px; padding: 8px 20px; font-size: 13px; font-weight: bold; }"
+            "QPushButton:hover { background: #0055aa; }"
+            "QPushButton:disabled { background: #b0b0b5; }"
+        )
+        btn_lay.addWidget(self._btn_download)
+
+        lay.addLayout(btn_lay)
+
+        self._btn_change.clicked.connect(self._change_location)
+        self._btn_cancel.clicked.connect(self.reject)
+        self._btn_download.clicked.connect(self._on_download)
+
+        self._update_info()
+
+    def _update_info(self):
+        self._loc_label.setText(f"Storage location:  {self._dest_dir}")
+        free = _free_space(self._dest_dir)
+        free_gb = free / (1024 ** 3)
+        self._space_label.setText(f"Available space:   {_format_gb(free)}")
+
+        if free_gb < REQUIRED_GB + 0.5:
+            self._space_label.setStyleSheet("font-size: 12px; color: #d93025; font-weight: bold; border: none;")
+            self._warning_label.setText(
+                "Not enough disk space! Please free up space or change the storage location."
+            )
+            self._warning_label.show()
+            self._btn_download.setEnabled(False)
+        else:
+            self._space_label.setStyleSheet("font-size: 12px; color: #34a853; font-weight: bold; border: none;")
+            self._warning_label.hide()
+            self._btn_download.setEnabled(True)
+
+    def _change_location(self):
+        folder = QFileDialog.getExistingDirectory(
+            self, "Choose model storage folder", str(self._dest_dir.parent)
+        )
+        if folder:
+            self._dest_dir = Path(folder) / "VoiceClonner" / "models" / "xtts-v2"
+            self._config.custom_model_dir = str(self._dest_dir)
+            self._config.save()
+            self._update_info()
+
+    def _on_download(self):
+        self._accepted = True
+        self.accept()
+
+    @property
+    def dest_dir(self) -> Path:
+        return self._dest_dir
+
+    @property
+    def accepted_download(self) -> bool:
+        return self._accepted
+
+
 class ModelDownloadThread(QThread):
-    progress = pyqtSignal(str, int, int)  # filename, bytes_done, bytes_total
+    progress = pyqtSignal(str, int, int)
     file_done = pyqtSignal(str)
     all_done = pyqtSignal()
     error = pyqtSignal(str)
@@ -85,7 +245,7 @@ class ModelDownloadThread(QThread):
 
 
 class ModelDownloadDialog(QDialog):
-    """Modal dialog for downloading the voice model on first launch."""
+    """Modal dialog for downloading the voice model."""
 
     def __init__(self, dest_dir: Path, parent=None):
         super().__init__(parent)

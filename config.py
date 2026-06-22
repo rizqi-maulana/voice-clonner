@@ -34,6 +34,7 @@ class Config:
         self.first_run_complete = False
         self.open_count = 0
         self.last_skipped_version = None
+        self.custom_model_dir = None
 
     @classmethod
     def load(cls):
@@ -44,6 +45,7 @@ class Config:
                 c.first_run_complete = data.get("first_run_complete", False)
                 c.open_count = data.get("open_count", 0)
                 c.last_skipped_version = data.get("last_skipped_version")
+                c.custom_model_dir = data.get("custom_model_dir")
             except (json.JSONDecodeError, OSError):
                 pass
         return c
@@ -55,9 +57,15 @@ class Config:
             "first_run_complete": self.first_run_complete,
             "open_count": self.open_count,
             "last_skipped_version": self.last_skipped_version,
+            "custom_model_dir": self.custom_model_dir,
         }
         tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
         tmp.replace(CONFIG_FILE)
+
+    def get_model_dir(self):
+        if self.custom_model_dir:
+            return Path(self.custom_model_dir)
+        return XTTS_MODEL_DIR
 
     def increment_open_count(self):
         self.open_count += 1

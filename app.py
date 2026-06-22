@@ -728,8 +728,9 @@ class WaveformCanvas(FigureCanvas):
 # ─── Main Window ──────────────────────────────────────────────────────────────
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, app_config=None):
         super().__init__()
+        self.app_config   = app_config
         self.model        = None
         self.config       = None
         self.device       = "cpu"
@@ -1021,14 +1022,23 @@ class MainWindow(QMainWindow):
     # ── Model Loading ─────────────────────────────────────────────────────────
 
     def _load_model(self):
-        model_dir = XTTS_MODEL_DIR
+        cfg = self.app_config
+        model_dir = cfg.get_model_dir() if cfg else XTTS_MODEL_DIR
         if not model_dir.exists() or not (model_dir / "model.pth").exists():
-            from model_downloader import ModelDownloadDialog
+            from model_downloader import StorageCheckDialog, ModelDownloadDialog
+
+            storage_dlg = StorageCheckDialog(model_dir, cfg, self)
+            if storage_dlg.exec_() != QDialog.Accepted or not storage_dlg.accepted_download:
+                self.model_lbl.setText("Model download cancelled.")
+                self.model_lbl.setObjectName("info_warn")
+                return
+            model_dir = storage_dlg.dest_dir
+
             self.model_lbl.setText("Downloading voice model for first use...")
             dlg = ModelDownloadDialog(model_dir, self)
             dlg.exec_()
             if not dlg.succeeded:
-                self.model_lbl.setText("Model download cancelled or failed.")
+                self.model_lbl.setText("Model download failed.")
                 self.model_lbl.setObjectName("info_warn")
                 return
 
@@ -1470,7 +1480,7 @@ def main():
     if cfg.open_count % 5 == 0 and cfg.open_count > 0:
         DiscordDialog().exec_()
 
-    win = MainWindow()
+    win = MainWindow(app_config=cfg)
     win.show()
     sys.exit(app.exec_())
 
