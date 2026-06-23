@@ -477,8 +477,9 @@ class ChatterboxManager:
         self._proc.setProcessEnvironment(env)
 
         if IS_FROZEN:
+            from config import INTERNAL_DIR
             ext = ".exe" if sys.platform == "win32" else ""
-            exe = APP_DIR / f"chatterbox_server{ext}"
+            exe = INTERNAL_DIR / f"chatterbox_server{ext}"
             if not exe.exists():
                 self._on_error(
                     f"Indonesian voice engine not found:\n{exe}\n\n"

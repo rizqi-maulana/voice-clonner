@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 __all__ = [
-    "IS_FROZEN", "APP_DIR", "APP_DATA_DIR",
+    "IS_FROZEN", "APP_DIR", "INTERNAL_DIR", "APP_DATA_DIR",
     "XTTS_MODEL_DIR", "HF_CACHE_DIR", "CONFIG_FILE",
     "Config", "get_chatterbox_cmd",
 ]
@@ -13,8 +13,10 @@ IS_FROZEN = getattr(sys, "frozen", False)
 
 if IS_FROZEN:
     APP_DIR = Path(sys.executable).parent
+    INTERNAL_DIR = Path(sys._MEIPASS)
 else:
     APP_DIR = Path(__file__).resolve().parent
+    INTERNAL_DIR = APP_DIR
 
 if sys.platform == "win32":
     _base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
@@ -74,7 +76,7 @@ class Config:
 def get_chatterbox_cmd():
     if IS_FROZEN:
         ext = ".exe" if sys.platform == "win32" else ""
-        exe = APP_DIR / f"chatterbox_server{ext}"
+        exe = INTERNAL_DIR / f"chatterbox_server{ext}"
         return str(exe), []
     chatterbox_dir = APP_DIR / "chatterbox"
     return "uv", ["run", "python", "-u", "generate.py"], str(chatterbox_dir)
