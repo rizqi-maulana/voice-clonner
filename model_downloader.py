@@ -196,8 +196,51 @@ class ModelDownloadThread(QThread):
     def cancel(self):
         self._cancel = True
 
+    def _download_file(self, requests, url, tmp_path, total_hint, filename):
+        """Download a single file with resume support."""
+        downloaded = 0
+        headers = {}
+
+        if os.path.exists(tmp_path):
+            downloaded = os.path.getsize(tmp_path)
+            headers["Range"] = f"bytes={downloaded}-"
+
+        r = requests.get(
+            url, stream=True, timeout=(15, 300),
+            allow_redirects=True, headers=headers,
+        )
+
+        if r.status_code == 416:
+            return downloaded
+
+        r.raise_for_status()
+
+        if r.status_code == 200:
+            total = int(r.headers.get("content-length", total_hint))
+            downloaded = 0
+            mode = "wb"
+        else:
+            content_range = r.headers.get("content-range", "")
+            if "/" in content_range:
+                total = int(content_range.split("/")[-1])
+            else:
+                total = total_hint
+            mode = "ab"
+
+        with open(tmp_path, mode) as f:
+            for chunk in r.iter_content(chunk_size=1024 * 1024):
+                if self._cancel:
+                    return -1
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    self.progress.emit(filename, downloaded, total)
+
+        return downloaded
+
     def run(self):
         import requests
+        import time
 
         self.dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -211,32 +254,33 @@ class ModelDownloadThread(QThread):
                 continue
 
             url = f"{HF_BASE}/{filename}"
-            try:
-                r = requests.get(url, stream=True, timeout=60, allow_redirects=True)
-                r.raise_for_status()
-            except Exception as e:
-                self.error.emit(f"Failed to download {filename}: {e}")
-                return
-
-            total = int(r.headers.get("content-length", expected_size))
             tmp = str(local_path) + ".tmp"
-            downloaded = 0
+            max_retries = 3
+            last_error = None
 
-            try:
-                with open(tmp, "wb") as f:
-                    for chunk in r.iter_content(chunk_size=1024 * 1024):
-                        if self._cancel:
-                            return
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            self.progress.emit(filename, downloaded, total)
+            for attempt in range(max_retries):
+                if self._cancel:
+                    return
+                try:
+                    result = self._download_file(
+                        requests, url, tmp, expected_size, filename)
+                    if result == -1:
+                        return
+                    os.replace(tmp, str(local_path))
+                    last_error = None
+                    break
+                except Exception as e:
+                    last_error = e
+                    if attempt < max_retries - 1:
+                        time.sleep(3)
 
-                os.replace(tmp, str(local_path))
-            except Exception as e:
+            if last_error is not None:
                 if os.path.exists(tmp):
-                    os.remove(tmp)
-                self.error.emit(f"Error writing {filename}: {e}")
+                    try:
+                        os.remove(tmp)
+                    except OSError:
+                        pass
+                self.error.emit(str(last_error))
                 return
 
             self.file_done.emit(filename)
