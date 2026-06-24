@@ -48,13 +48,13 @@ def _download_file(repo_id, filename, dest_dir, label, idx, total):
     local_path = dest_dir / filename
 
     if local_path.exists() and local_path.stat().st_size > 0:
-        emit({"type": "status", "msg": f"({idx}/{total}) {label}: {filename} [cached]"})
+        emit({"type": "status", "msg": f"Setting up component {idx}/{total}..."})
         return str(local_path)
 
     url = f"https://huggingface.co/{repo_id}/resolve/main/{filename}"
-    emit({"type": "status", "msg": f"({idx}/{total}) Mengunduh {label}: {filename}..."})
+    emit({"type": "status", "msg": f"Setting up component {idx}/{total}..."})
 
-    r = _req.get(url, stream=True, timeout=60, allow_redirects=True)
+    r = _req.get(url, stream=True, timeout=(15, 300), allow_redirects=True)
     r.raise_for_status()
     total_bytes = int(r.headers.get("content-length", 0))
     size_mb = int(total_bytes / (1024 * 1024)) if total_bytes else 0
@@ -74,20 +74,20 @@ def _download_file(repo_id, filename, dest_dir, label, idx, total):
                 last_mb = done_mb
                 pct = int(100 * downloaded / total_bytes) if total_bytes else 0
                 emit({"type": "progress", "pct": pct,
-                      "msg": f"{filename}: {done_mb}/{size_mb} MB ({pct}%)"})
+                      "msg": f"Setting up... {pct}%"})
 
     os.replace(tmp, str(local_path))
     emit({"type": "progress", "pct": 100,
-          "msg": f"{filename}: {size_mb}/{size_mb} MB (100%)"})
-    emit({"type": "status", "msg": f"({idx}/{total}) {label}: {filename} [OK]"})
+          "msg": f"Setting up... 100%"})
+    emit({"type": "status", "msg": f"Setting up component {idx}/{total}..."})
     return str(local_path)
 
 
 def load_model():
-    emit({"type": "status", "msg": "Import PyTorch..."})
+    emit({"type": "status", "msg": "Preparing..."})
     import torch
 
-    emit({"type": "status", "msg": "Import Chatterbox TTS..."})
+    emit({"type": "status", "msg": "Loading components..."})
     from chatterbox.tts import ChatterboxTTS
     from safetensors.torch import load_file
 
@@ -105,17 +105,18 @@ def load_model():
     for i, (repo, fname, dest, label) in enumerate(downloads, 1):
         _download_file(repo, fname, dest, label, i, n)
 
-    # perth.PerthImplicitWatermarker can be None when the compiled backend
-    # is missing (CPU-only / Windows).  Fall back to the no-op stub so
-    # ChatterboxTTS.__init__ doesn't crash.
     import perth
-    if perth.PerthImplicitWatermarker is None:
-        perth.PerthImplicitWatermarker = perth.DummyWatermarker
+    if not getattr(perth, 'PerthImplicitWatermarker', None):
+        class _NoOpWatermarker:
+            def __init__(self, *a, **kw): pass
+            def watermark(self, wav, *a, **kw): return wav
+            def detect(self, *a, **kw): return {}
+        perth.PerthImplicitWatermarker = _NoOpWatermarker
 
-    emit({"type": "status", "msg": f"Memuat Chatterbox base model ({device})..."})
+    emit({"type": "status", "msg": "Loading voice model..."})
     model = ChatterboxTTS.from_local(BASE_DIR, device)
 
-    emit({"type": "status", "msg": "Menerapkan bobot Indonesian fine-tune..."})
+    emit({"type": "status", "msg": "Applying language configuration..."})
     indo_t3 = load_file(INDO_DIR / "t3_cfg.safetensors", device="cpu")
     model.t3.load_state_dict(indo_t3)
 
@@ -191,7 +192,7 @@ def generate_audio(model, sr, text: str, ref_path: str, out_path: str,
 
 
 def main():
-    emit({"type": "status", "msg": "Chatterbox server dimulai..."})
+    emit({"type": "status", "msg": "Starting voice engine..."})
     try:
         model, sr = load_model()
     except Exception as e:

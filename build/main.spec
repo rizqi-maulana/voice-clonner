@@ -26,6 +26,8 @@ hiddenimports = [
     'av',
     'blis',
     'einops',
+    'pypinyin',
+    'num2words',
 ]
 
 hiddenimports += collect_submodules('numpy')
@@ -39,6 +41,7 @@ hiddenimports += collect_submodules('unidic_lite')
 hiddenimports += collect_submodules('torch')
 hiddenimports += collect_submodules('torchaudio')
 hiddenimports += collect_submodules('einops')
+hiddenimports += collect_submodules('pypinyin')
 hiddenimports += collect_submodules('TTS')
 
 extra_datas = []

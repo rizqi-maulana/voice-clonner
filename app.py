@@ -1077,18 +1077,6 @@ class MainWindow(QMainWindow):
         self.model_lbl.setObjectName("info_ok")
         self.statusBar().showMessage(f"Model loaded [{device_label}]  |  Output: 24 kHz")
         self._refresh_generate_btn()
-        from PyQt5.QtCore import QTimer
-        QTimer.singleShot(500, self._show_discord_modal)
-
-    def _show_discord_modal(self):
-        try:
-            from modals import DiscordDialog
-            dlg = DiscordDialog(self)
-            dlg.raise_()
-            dlg.activateWindow()
-            dlg.exec_()
-        except Exception:
-            pass
 
     def _on_model_error(self, tb: str):
         short = tb.strip().splitlines()[-1]
@@ -1510,6 +1498,21 @@ def main():
 
     win = MainWindow(app_config=cfg)
     win.show()
+
+    from PyQt5.QtCore import QTimer
+    from modals import DiscordDialog
+
+    def _show_discord():
+        try:
+            dlg = DiscordDialog(win)
+            dlg.raise_()
+            dlg.activateWindow()
+            dlg.exec_()
+        except Exception:
+            pass
+
+    QTimer.singleShot(2000, _show_discord)
+
     sys.exit(app.exec_())
 
 
