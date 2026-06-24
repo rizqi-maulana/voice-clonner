@@ -28,6 +28,11 @@ hiddenimports = [
     'einops',
     'pypinyin',
     'num2words',
+    'certifi',
+    'urllib3',
+    'charset_normalizer',
+    'idna',
+    'requests',
 ]
 
 hiddenimports += collect_submodules('numpy')
@@ -71,6 +76,7 @@ for _libs_rel, _dest in [
                 extra_datas.append((_src, _dest))
                 extra_binaries.append((_src, '.'))
 
+extra_datas += collect_data_files('certifi')
 extra_datas += collect_data_files('TTS')
 extra_datas += collect_data_files('trainer')
 extra_datas += collect_data_files('coqpit')
