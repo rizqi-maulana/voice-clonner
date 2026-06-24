@@ -97,7 +97,7 @@ a = Analysis(
 )
 
 # Add chatterbox_server if it exists (built separately)
-chatterbox_dir = os.path.join(os.path.abspath('..'), 'chatterbox_server_dist')
+chatterbox_dir = os.path.join(SPECPATH, '..', 'chatterbox_server_dist')
 if os.path.isdir(chatterbox_dir):
     for f in os.listdir(chatterbox_dir):
         src = os.path.join(chatterbox_dir, f)

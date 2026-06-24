@@ -3,6 +3,8 @@ import os
 import json
 from pathlib import Path
 
+from version import __version__
+
 __all__ = [
     "IS_FROZEN", "APP_DIR", "INTERNAL_DIR", "APP_DATA_DIR",
     "XTTS_MODEL_DIR", "HF_CACHE_DIR", "CONFIG_FILE",
@@ -33,6 +35,7 @@ CONFIG_FILE = APP_DATA_DIR / "config.json"
 
 class Config:
     def __init__(self):
+        self.app_version = __version__
         self.first_run_complete = False
         self.open_count = 0
         self.last_skipped_version = None
@@ -44,9 +47,11 @@ class Config:
         if CONFIG_FILE.exists():
             try:
                 data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-                c.first_run_complete = data.get("first_run_complete", False)
-                c.open_count = data.get("open_count", 0)
-                c.last_skipped_version = data.get("last_skipped_version")
+                stored_version = data.get("app_version")
+                if stored_version == __version__:
+                    c.first_run_complete = data.get("first_run_complete", False)
+                    c.open_count = data.get("open_count", 0)
+                    c.last_skipped_version = data.get("last_skipped_version")
                 c.custom_model_dir = data.get("custom_model_dir")
             except (json.JSONDecodeError, OSError):
                 pass
@@ -56,6 +61,7 @@ class Config:
         APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
         tmp = CONFIG_FILE.with_suffix(".tmp")
         data = {
+            "app_version": self.app_version,
             "first_run_complete": self.first_run_complete,
             "open_count": self.open_count,
             "last_skipped_version": self.last_skipped_version,

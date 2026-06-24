@@ -768,17 +768,35 @@ class MainWindow(QMainWindow):
         root_vbox.setSpacing(6)
 
         # ── Header ──
-        hdr = QVBoxLayout()
-        hdr.setSpacing(2)
+        hdr_row = QHBoxLayout()
+        hdr_row.setContentsMargins(0, 0, 0, 0)
+        hdr_row.addStretch()
+
+        hdr_center = QVBoxLayout()
+        hdr_center.setSpacing(2)
         title = QLabel("Voice Clonner")
         title.setObjectName("title")
         title.setAlignment(Qt.AlignCenter)
         self.model_lbl = QLabel("Loading voice model, please wait...")
         self.model_lbl.setObjectName("info_warn")
         self.model_lbl.setAlignment(Qt.AlignCenter)
-        hdr.addWidget(title)
-        hdr.addWidget(self.model_lbl)
-        root_vbox.addLayout(hdr)
+        hdr_center.addWidget(title)
+        hdr_center.addWidget(self.model_lbl)
+        hdr_row.addLayout(hdr_center, 1)
+
+        import webbrowser
+        btn_discord = QPushButton("Discord")
+        btn_discord.setFixedSize(80, 30)
+        btn_discord.setStyleSheet(
+            "QPushButton { background: #5865F2; color: white; border: none; "
+            "border-radius: 6px; font-size: 12px; font-weight: bold; }"
+            "QPushButton:hover { background: #4752C4; }"
+        )
+        btn_discord.clicked.connect(
+            lambda: webbrowser.open("https://discord.gg/FEXhA3cQjP"))
+        hdr_row.addWidget(btn_discord, 0, Qt.AlignTop)
+
+        root_vbox.addLayout(hdr_row)
 
         # ── Top row: reference + settings ──
         top_row = QHBoxLayout()
@@ -1059,6 +1077,12 @@ class MainWindow(QMainWindow):
         self.model_lbl.setObjectName("info_ok")
         self.statusBar().showMessage(f"Model loaded [{device_label}]  |  Output: 24 kHz")
         self._refresh_generate_btn()
+        from PyQt5.QtCore import QTimer
+        QTimer.singleShot(500, self._show_discord_modal)
+
+    def _show_discord_modal(self):
+        from modals import DiscordDialog
+        DiscordDialog(self).exec_()
 
     def _on_model_error(self, tb: str):
         short = tb.strip().splitlines()[-1]
@@ -1448,7 +1472,7 @@ def main():
     cfg.increment_open_count()
     cfg.save()
 
-    from modals import FirstTimeSetupDialog, UpdateCheckThread, UpdateDialog, DiscordDialog
+    from modals import FirstTimeSetupDialog, UpdateCheckThread, UpdateDialog
 
     if not cfg.first_run_complete:
         dlg = FirstTimeSetupDialog()
@@ -1477,9 +1501,6 @@ def main():
             if result == QDialog.Rejected and not required:
                 cfg.last_skipped_version = ver
                 cfg.save()
-
-    if cfg.open_count % 5 == 0 and cfg.open_count > 0:
-        DiscordDialog().exec_()
 
     win = MainWindow(app_config=cfg)
     win.show()
