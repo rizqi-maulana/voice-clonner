@@ -28,11 +28,17 @@ hiddenimports = [
     'einops',
     'pypinyin',
     'num2words',
+    'hangul_romanize',
+    'hangul_romanize.rule',
+    'hangul_romanize.rule.academic',
+    'tokenizers',
     'certifi',
     'urllib3',
     'charset_normalizer',
     'idna',
     'requests',
+    'packaging',
+    'coqpit',
 ]
 
 hiddenimports += collect_submodules('numpy')
@@ -47,6 +53,7 @@ hiddenimports += collect_submodules('torch')
 hiddenimports += collect_submodules('torchaudio')
 hiddenimports += collect_submodules('einops')
 hiddenimports += collect_submodules('pypinyin')
+hiddenimports += collect_submodules('hangul_romanize')
 hiddenimports += collect_submodules('TTS')
 
 extra_datas = []
