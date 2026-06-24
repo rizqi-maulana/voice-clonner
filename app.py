@@ -1081,8 +1081,14 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(500, self._show_discord_modal)
 
     def _show_discord_modal(self):
-        from modals import DiscordDialog
-        DiscordDialog(self).exec_()
+        try:
+            from modals import DiscordDialog
+            dlg = DiscordDialog(self)
+            dlg.raise_()
+            dlg.activateWindow()
+            dlg.exec_()
+        except Exception:
+            pass
 
     def _on_model_error(self, tb: str):
         short = tb.strip().splitlines()[-1]
