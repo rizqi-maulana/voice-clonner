@@ -45,7 +45,7 @@ class StorageCheckDialog(QDialog):
 
     def __init__(self, dest_dir: Path, config, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Model Storage")
+        self.setWindowTitle("Initial Setup")
         self.setFixedSize(520, 280)
         self.setModal(True)
         self.setWindowFlags(
@@ -60,12 +60,12 @@ class StorageCheckDialog(QDialog):
         lay.setContentsMargins(28, 22, 28, 18)
         lay.setSpacing(10)
 
-        title = QLabel("Voice model download")
+        title = QLabel("Initial Setup")
         title.setStyleSheet("font-size: 16px; font-weight: bold; color: #1d1d1f;")
         lay.addWidget(title)
 
         desc = QLabel(
-            "The voice model (~2 GB) needs to be downloaded once.\n"
+            "Some required components (~2 GB) need to be set up.\n"
             "Please make sure you have enough disk space."
         )
         desc.setWordWrap(True)
@@ -123,7 +123,7 @@ class StorageCheckDialog(QDialog):
         self._btn_cancel.setMaximumWidth(100)
         btn_lay.addWidget(self._btn_cancel)
 
-        self._btn_download = QPushButton("Download")
+        self._btn_download = QPushButton("Continue")
         self._btn_download.setMaximumWidth(120)
         self._btn_download.setStyleSheet(
             "QPushButton { background: #0066cc; color: white; border: none; "
@@ -161,7 +161,7 @@ class StorageCheckDialog(QDialog):
 
     def _change_location(self):
         folder = QFileDialog.getExistingDirectory(
-            self, "Choose model storage folder", str(self._dest_dir.parent)
+            self, "Choose storage folder", str(self._dest_dir.parent)
         )
         if folder:
             self._dest_dir = Path(folder) / "VoiceClonner" / "models" / "xtts-v2"
@@ -249,7 +249,7 @@ class ModelDownloadDialog(QDialog):
 
     def __init__(self, dest_dir: Path, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Downloading Voice Model")
+        self.setWindowTitle("Setting Up")
         self.setFixedSize(500, 220)
         self.setModal(True)
         self.setWindowFlags(
@@ -265,14 +265,14 @@ class ModelDownloadDialog(QDialog):
         lay.setSpacing(12)
 
         info = QLabel(
-            "Downloading the voice model for the first time.\n"
-            "This is about 2 GB and only needs to happen once."
+            "Setting up required components for the first time.\n"
+            "This may take a few minutes depending on your connection."
         )
         info.setWordWrap(True)
         info.setStyleSheet("font-size: 14px; color: #1d1d1f;")
         lay.addWidget(info)
 
-        self.file_lbl = QLabel("Preparing...")
+        self.file_lbl = QLabel("Preparing setup...")
         self.file_lbl.setStyleSheet("font-size: 13px; color: #6e6e73;")
         lay.addWidget(self.file_lbl)
 
@@ -315,21 +315,20 @@ class ModelDownloadDialog(QDialog):
     def _on_progress(self, filename, done, total):
         pct = int(100 * done / total) if total > 0 else 0
         self.progress_bar.setValue(pct)
-        done_mb = done // (1024 * 1024)
-        total_mb = total // (1024 * 1024)
-        self.file_lbl.setText(f"Downloading: {filename}")
-        self.detail_lbl.setText(f"{done_mb} / {total_mb} MB  ({pct}%)")
+        self.file_lbl.setText("Setting up...")
+        self.detail_lbl.setText(f"{pct}% complete")
 
     def _on_file_done(self, filename):
-        self.file_lbl.setText(f"{filename}  [OK]")
+        self.file_lbl.setText("Setting up...")
 
     def _on_all_done(self):
         self._success = True
         self.accept()
 
     def _on_error(self, msg):
-        QMessageBox.critical(self, "Download Error",
-                             f"Failed to download model:\n\n{msg}")
+        QMessageBox.critical(self, "Setup Error",
+                             "Setup could not be completed. Please check your\n"
+                             "internet connection and try again.")
         self.reject()
 
     def _on_cancel(self):
