@@ -2,6 +2,8 @@
 
 Clone any voice from a short audio recording. Load or record a reference voice, type the text you want spoken, and generate speech that sounds like the original speaker.
 
+[![Join Discord](https://img.shields.io/badge/Join%20Community-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/FEXhA3cQjP)
+
 ## Features
 
 - Clone voices from audio files or microphone recordings
@@ -11,12 +13,13 @@ Clone any voice from a short audio recording. Load or record a reference voice, 
 - Indonesian abbreviation expansion for better pronunciation
 - Sample texts provided for each language to help with recording
 
-## Download
+## How to Run
 
-Download the latest version from the [Releases](https://github.com/rizqi-maulana/voice-clonner/releases) page.
+1. **Download** this repository — click the green **Code** button, then **Download ZIP**, and extract it to any folder.
 
-- **Windows**: Download `voice-clonner-windows.zip`, extract, and run `voice-clonner.exe`
-- **macOS**: Download `voice-clonner-macos.zip`, extract, and run `voice-clonner`
+2. **Run the app** — double-click `run.bat`. On first launch, it will automatically install the required tools and dependencies. This may take a few minutes.
+
+3. That's it! The app will open and guide you through initial setup.
 
 ## How to Use
 
@@ -33,7 +36,6 @@ Download the latest version from the [Releases](https://github.com/rizqi-maulana
 ## System Requirements
 
 - **Windows** 10 or later
-- **macOS** 12 (Monterey) or later
 - **Disk space**: ~2 GB for the main voice model, ~5 GB additional for Indonesian (downloaded on first use)
 - **RAM**: 8 GB minimum, 16 GB recommended
 
@@ -48,7 +50,7 @@ Download the latest version from the [Releases](https://github.com/rizqi-maulana
 
 Join our Discord community for help, updates, and sharing your creations:
 
-[Join Discord](https://discord.gg/FEXhA3cQjP)
+[![Join Discord](https://img.shields.io/badge/Join%20Community-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/FEXhA3cQjP)
 
 ## License
 

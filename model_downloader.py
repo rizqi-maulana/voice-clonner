@@ -206,7 +206,7 @@ class ModelDownloadThread(QThread):
             headers["Range"] = f"bytes={downloaded}-"
 
         r = requests.get(
-            url, stream=True, timeout=(15, 300),
+            url, stream=True, timeout=(30, 300),
             allow_redirects=True, headers=headers,
         )
 
@@ -242,6 +242,12 @@ class ModelDownloadThread(QThread):
         import requests
         import time
 
+        try:
+            import urllib3.util.connection as urllib3_conn
+            urllib3_conn.HAS_IPV6 = False
+        except Exception:
+            pass
+
         self.dest_dir.mkdir(parents=True, exist_ok=True)
 
         for filename, label, expected_size in MODEL_FILES:
@@ -255,7 +261,8 @@ class ModelDownloadThread(QThread):
 
             url = f"{HF_BASE}/{filename}"
             tmp = str(local_path) + ".tmp"
-            max_retries = 3
+            max_retries = 5
+            backoff = [5, 10, 20, 40, 60]
             last_error = None
 
             for attempt in range(max_retries):
@@ -272,7 +279,7 @@ class ModelDownloadThread(QThread):
                 except Exception as e:
                     last_error = e
                     if attempt < max_retries - 1:
-                        time.sleep(3)
+                        time.sleep(backoff[attempt])
 
             if last_error is not None:
                 if os.path.exists(tmp):

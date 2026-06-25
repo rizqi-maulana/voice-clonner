@@ -39,9 +39,26 @@ BASE_DIR = _CACHE / "chatterbox_base"
 INDO_DIR = _CACHE / "chatterbox_indo"
 
 
+_ipv4_patched = False
+
+def _force_ipv4():
+    global _ipv4_patched
+    if _ipv4_patched:
+        return
+    try:
+        import urllib3.util.connection as urllib3_conn
+        urllib3_conn.HAS_IPV6 = False
+    except Exception:
+        pass
+    _ipv4_patched = True
+
+
 def _download_file(repo_id, filename, dest_dir, label, idx, total):
-    """Download one file from HuggingFace with real-time MB progress via requests."""
+    """Download one file from HuggingFace with retry and resume support."""
     import requests as _req
+    import time
+
+    _force_ipv4()
 
     dest_dir = Path(dest_dir)
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -54,27 +71,67 @@ def _download_file(repo_id, filename, dest_dir, label, idx, total):
     url = f"https://huggingface.co/{repo_id}/resolve/main/{filename}"
     emit({"type": "status", "msg": f"Setting up component {idx}/{total}..."})
 
-    r = _req.get(url, stream=True, timeout=(15, 300), allow_redirects=True)
-    r.raise_for_status()
-    total_bytes = int(r.headers.get("content-length", 0))
-    size_mb = int(total_bytes / (1024 * 1024)) if total_bytes else 0
-
     tmp = str(local_path) + ".tmp"
-    downloaded = 0
-    last_mb = -1
-    step = 5 if size_mb > 100 else 1
-    with open(tmp, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024 * 1024):
-            if not chunk:
-                continue
-            f.write(chunk)
-            downloaded += len(chunk)
-            done_mb = int(downloaded / (1024 * 1024))
-            if done_mb >= last_mb + step:
-                last_mb = done_mb
-                pct = int(100 * downloaded / total_bytes) if total_bytes else 0
-                emit({"type": "progress", "pct": pct,
-                      "msg": f"Setting up... {pct}%"})
+    max_retries = 5
+    backoff = [5, 10, 20, 40, 60]
+
+    for attempt in range(max_retries):
+        try:
+            downloaded = 0
+            headers = {}
+            if os.path.exists(tmp):
+                downloaded = os.path.getsize(tmp)
+                headers["Range"] = f"bytes={downloaded}-"
+
+            r = _req.get(url, stream=True, timeout=(30, 300),
+                         allow_redirects=True, headers=headers)
+
+            if r.status_code == 416:
+                break
+
+            r.raise_for_status()
+
+            if r.status_code == 200:
+                total_bytes = int(r.headers.get("content-length", 0))
+                downloaded = 0
+                mode = "wb"
+            else:
+                content_range = r.headers.get("content-range", "")
+                if "/" in content_range:
+                    total_bytes = int(content_range.split("/")[-1])
+                else:
+                    total_bytes = 0
+                mode = "ab"
+
+            size_mb = int(total_bytes / (1024 * 1024)) if total_bytes else 0
+            step = 5 if size_mb > 100 else 1
+            last_mb = -1
+
+            with open(tmp, mode) as f:
+                for chunk in r.iter_content(chunk_size=1024 * 1024):
+                    if not chunk:
+                        continue
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    done_mb = int(downloaded / (1024 * 1024))
+                    if done_mb >= last_mb + step:
+                        last_mb = done_mb
+                        pct = int(100 * downloaded / total_bytes) if total_bytes else 0
+                        emit({"type": "progress", "pct": pct,
+                              "msg": f"Setting up... {pct}%"})
+
+            break
+        except Exception:
+            if attempt < max_retries - 1:
+                wait = backoff[attempt]
+                emit({"type": "status",
+                      "msg": f"Connection issue, retrying in {wait}s..."})
+                time.sleep(wait)
+            else:
+                raise ConnectionError(
+                    "Could not connect to the download server. "
+                    "Please check your internet connection and try again."
+                )
 
     os.replace(tmp, str(local_path))
     emit({"type": "progress", "pct": 100,
@@ -110,6 +167,7 @@ def load_model():
         class _NoOpWatermarker:
             def __init__(self, *a, **kw): pass
             def watermark(self, wav, *a, **kw): return wav
+            def apply_watermark(self, wav, *a, **kw): return wav
             def detect(self, *a, **kw): return {}
         perth.PerthImplicitWatermarker = _NoOpWatermarker
 
@@ -195,6 +253,9 @@ def main():
     emit({"type": "status", "msg": "Starting voice engine..."})
     try:
         model, sr = load_model()
+    except (ConnectionError, OSError) as e:
+        emit({"type": "error", "msg": str(e)})
+        sys.exit(1)
     except Exception as e:
         emit({"type": "error", "msg": str(e), "tb": tb_mod.format_exc()})
         sys.exit(1)

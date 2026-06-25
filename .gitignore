@@ -2,12 +2,17 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+chatterbox/.venv/
 saved/
 *.wav
 build/dist/
 build/build/
+build/build_*/
 *.tar.gz
 uv.lock
+chatterbox/uv.lock
 *.spec.bak
 .DS_Store
 Thumbs.db
+chatterbox_server_dist/
+dist/

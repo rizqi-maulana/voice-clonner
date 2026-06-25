@@ -27,7 +27,7 @@ matplotlib.use("Qt5Agg")
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-from config import XTTS_MODEL_DIR, HF_CACHE_DIR, APP_DIR, APP_DATA_DIR, IS_FROZEN, Config
+from config import XTTS_MODEL_DIR, HF_CACHE_DIR, APP_DIR, APP_DATA_DIR, Config
 from theme import STYLE
 from version import __version__
 
@@ -474,31 +474,18 @@ class ChatterboxManager:
         env.insert("PYTHONIOENCODING", "utf-8")
         env.insert("HF_HOME", str(HF_CACHE_DIR))
         env.insert("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+        env.remove("VIRTUAL_ENV")
         self._proc.setProcessEnvironment(env)
 
-        if IS_FROZEN:
-            from config import INTERNAL_DIR
-            ext = ".exe" if sys.platform == "win32" else ""
-            exe = INTERNAL_DIR / f"chatterbox_server{ext}"
-            if not exe.exists():
-                self._on_error(
-                    f"Indonesian voice engine not found:\n{exe}\n\n"
-                    "Please reinstall the application."
-                )
-                return
-            self._proc.start(str(exe), [])
-        else:
-            env.remove("VIRTUAL_ENV")
-            self._proc.setProcessEnvironment(env)
-            chatterbox_dir = APP_DIR / "chatterbox"
-            if not chatterbox_dir.exists():
-                self._on_error(
-                    f"Indonesian engine directory not found:\n{chatterbox_dir}\n\n"
-                    "Please reinstall the application."
-                )
-                return
-            self._proc.setWorkingDirectory(str(chatterbox_dir))
-            self._proc.start("uv", ["run", "python", "-u", "generate.py"])
+        chatterbox_dir = APP_DIR / "chatterbox"
+        if not chatterbox_dir.exists():
+            self._on_error(
+                "Indonesian voice engine not found.\n\n"
+                "Please re-download the application."
+            )
+            return
+        self._proc.setWorkingDirectory(str(chatterbox_dir))
+        self._proc.start("uv", ["run", "python", "-u", "generate.py"])
 
     def generate(self, text: str, ref_path: str, out_path: str,
                  exaggeration: float = 0.5):
