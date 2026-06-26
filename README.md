@@ -13,6 +13,10 @@ Clone any voice from a short audio recording. Load or record a reference voice, 
 - Indonesian abbreviation expansion for better pronunciation
 - Sample texts provided for each language to help with recording
 
+## Demo
+
+[![Watch Demo](https://img.shields.io/badge/Watch%20Demo-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/uQ0TEMTE4T4)
+
 ## Before You Start
 
 Make sure you have the following ready before running the app:
