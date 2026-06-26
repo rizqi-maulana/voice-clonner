@@ -13,6 +13,45 @@ Clone any voice from a short audio recording. Load or record a reference voice, 
 - Indonesian abbreviation expansion for better pronunciation
 - Sample texts provided for each language to help with recording
 
+## Before You Start
+
+Make sure you have the following ready before running the app:
+
+### 1. FFmpeg (Required)
+
+FFmpeg is needed for audio processing. Install it using one of these methods:
+
+**Option A — Using winget (recommended):**
+```
+winget install Gyan.FFmpeg
+```
+
+**Option B — Manual download:**
+1. Go to https://www.gyan.dev/ffmpeg/builds/
+2. Download **ffmpeg-release-essentials.zip**
+3. Extract the zip to a folder (e.g. `C:\ffmpeg`)
+4. Add the `bin` folder to your system PATH:
+   - Search "Environment Variables" in Start menu
+   - Click "Environment Variables..."
+   - Under "System variables", find `Path`, click "Edit"
+   - Click "New" and add `C:\ffmpeg\bin`
+   - Click OK on all windows
+
+To verify FFmpeg is installed, open a terminal and type:
+```
+ffmpeg -version
+```
+
+### 2. System Requirements
+
+- **Windows** 10 or later
+- **Internet connection** — required for first-time setup (downloads voice models automatically)
+- **Disk space** — ~2 GB for the main voice model, ~5 GB additional for Indonesian language (downloaded on first use)
+- **RAM** — 8 GB minimum, 16 GB recommended
+- **Microphone** — only needed if you want to record your own voice as reference (you can also load audio files)
+
+> Everything else (Python, packages, dependencies) is installed automatically when you first run the app. No manual setup needed.
+
 ## How to Run
 
 1. **Download** this repository — click the green **Code** button, then **Download ZIP**, and extract it to any folder.
@@ -33,18 +72,23 @@ Clone any voice from a short audio recording. Load or record a reference voice, 
 
 5. **Listen & Save** — Play the generated audio, and save it as a WAV file if you're satisfied.
 
-## System Requirements
-
-- **Windows** 10 or later
-- **Disk space**: ~2 GB for the main voice model, ~5 GB additional for Indonesian (downloaded on first use)
-- **RAM**: 8 GB minimum, 16 GB recommended
-
 ## Tips for Best Results
 
 - Use a clear, noise-free reference recording
 - 5-15 seconds of speech gives the best voice quality
 - Shorter references (<3 seconds) may produce lower quality
 - Very long references (>30 seconds) — only the first 30 seconds are used
+- WAV files work best for reference audio
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `run.bat` closes immediately | Right-click `run.bat` → "Run as administrator" |
+| "FFmpeg not found" error | Install FFmpeg (see "Before You Start" above) |
+| Download fails on first launch | Check your internet connection and try again — the app will resume where it left off |
+| Audio doesn't play | Make sure your speakers/headphones are connected |
+| App is slow to generate | This is normal on CPU. Generation takes 30-60 seconds depending on text length |
 
 ## Community
 
